@@ -29,7 +29,7 @@ Run the Playwright tests locally (they will automatically be wrapped in `xvfb-ru
 npm test
 ```
 
-> **Note:** On Debian/Ubuntu based distributions you may need to install additional system packages for Electron (for example: `apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libatk1.0-0 libatk-bridge2.0-0 libcups2 libasound2`). On Ubuntu 24.04 the audio package is named `libasound2t64`. The provided Docker image already contains these requirements.
+> **Note:** On Debian/Ubuntu based distributions you may need to install additional system packages for Electron (for example: `apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libatk1.0-0 libatk-bridge2.0-0 libcups2 libasound2`). On Ubuntu 24.04 and newer t64-based releases the packages `libgtk-3-0`, `libatk1.0-0`, `libatk-bridge2.0-0`, `libcups2`, and `libasound2` are provided under their `*-t64` names instead. The provided Docker image already contains these requirements.
 
 To watch the tests interact with the UI, run them in headed mode:
 
