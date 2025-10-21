@@ -10,26 +10,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install system dependencies
+      - name: Install Electron runtime dependencies on host
+        run: bash scripts/install-electron-deps.sh
+      - name: Build test image
+        run: docker build -t playwright-electron-sandbox-test .
+      - name: Run tests inside container
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            xvfb \
-            libxdamage1 \
-            libxrandr2 \
-            libxshmfence1 \
-            libxcb-dri3-0 \
-            libnss3 \
-            libxss1 \
-            libxtst6
-          for pkg in libatk1.0-0 libatk-bridge2.0-0 libcups2 libasound2 libgtk-3-0; do
-            sudo apt-get install -y "$pkg" || sudo apt-get install -y "${pkg}t64"
-          done
-      - run: npm ci
-      - name: Run tests
-        run: npm test
+          set -euo pipefail
+          container_name=playwright-electron-tests
+          docker rm -f "$container_name" >/dev/null 2>&1 || true
+          docker run --name "$container_name" --ipc=host \
+            -e DEBUG=pw:api \
+            -e ELECTRON_ENABLE_LOGGING=1 \
+            -d playwright-electron-sandbox-test
+
+          trap 'docker rm -f "$container_name" >/dev/null 2>&1 || true' EXIT
+
+          docker logs "$container_name" --follow --since 0 2>&1 | tee docker-test.log &
+          log_pid=$!
+
+          wait_status=0
+          wait_output=$(timeout 20m docker wait "$container_name") || wait_status=$?
+
+          if [ "$wait_status" -ne 0 ]; then
+            echo "docker wait failed with status $wait_status" >&2
+            docker logs "$container_name" --since 0 || true
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
+            kill "$log_pid" 2>/dev/null || true
+            wait "$log_pid" || true
+            exit 1
+          fi
+
+          exit_code="$wait_output"
+
+          wait "$log_pid" || true
+          docker rm "$container_name" >/dev/null 2>&1 || true
+
+          exit "$exit_code"
+      - name: Upload container logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-test-log
+          path: docker-test.log

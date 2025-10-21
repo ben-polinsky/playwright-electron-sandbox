@@ -8,7 +8,11 @@ const appRoot = path.join(__dirname, '..');
 async function launchElectron() {
   return electron.launch({
     executablePath: typeof electronBinary === 'string' ? electronBinary : undefined,
-    args: ['--no-sandbox', appRoot]
+    args: [appRoot],
+    env: {
+      ...process.env,
+      ELECTRON_DISABLE_SANDBOX: '1'
+    }
   });
 }
 

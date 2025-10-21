@@ -5,7 +5,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "xvfb-run -a npx playwright test",
+    "test": "bash scripts/run-playwright-tests.sh",
     "test:headed": "xvfb-run -a PLAYWRIGHT_HEADLESS=0 npx playwright test"
   },
   "author": "",
