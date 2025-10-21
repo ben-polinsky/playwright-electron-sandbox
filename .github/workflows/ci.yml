@@ -10,7 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Electron runtime dependencies on host
+        run: bash scripts/install-electron-deps.sh
       - name: Build test image
         run: docker build -t playwright-electron-sandbox-test .
       - name: Run tests inside container
-        run: docker run --rm --ipc=host playwright-electron-sandbox-test
+        run: |
+          set -euxo pipefail
+          docker run --rm --ipc=host \
+            -e DEBUG=pw:api \
+            -e ELECTRON_ENABLE_LOGGING=1 \
+            playwright-electron-sandbox-test | tee docker-test.log
+      - name: Upload container logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-test-log
+          path: docker-test.log
