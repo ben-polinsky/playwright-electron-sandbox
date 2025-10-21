@@ -13,4 +13,4 @@ jobs:
       - name: Build test image
         run: docker build -t playwright-electron-sandbox-test .
       - name: Run tests inside container
-        run: docker run --rm playwright-electron-sandbox-test
+        run: docker run --rm --ipc=host playwright-electron-sandbox-test
