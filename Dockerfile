@@ -13,7 +13,9 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-f
 
 COPY . .
 
+RUN chmod +x scripts/*.sh
+
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV CI=true
 
-CMD ["xvfb-run", "-a", "npx", "playwright", "test"]
+CMD ["bash", "scripts/run-playwright-tests.sh"]

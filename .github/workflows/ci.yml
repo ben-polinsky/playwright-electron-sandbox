@@ -16,11 +16,37 @@ jobs:
         run: docker build -t playwright-electron-sandbox-test .
       - name: Run tests inside container
         run: |
-          set -euxo pipefail
-          docker run --rm --ipc=host \
+          set -euo pipefail
+          container_name=playwright-electron-tests
+          docker rm -f "$container_name" >/dev/null 2>&1 || true
+          docker run --name "$container_name" --ipc=host \
             -e DEBUG=pw:api \
             -e ELECTRON_ENABLE_LOGGING=1 \
-            playwright-electron-sandbox-test | tee docker-test.log
+            -d playwright-electron-sandbox-test
+
+          trap 'docker rm -f "$container_name" >/dev/null 2>&1 || true' EXIT
+
+          docker logs "$container_name" --follow --since 0 2>&1 | tee docker-test.log &
+          log_pid=$!
+
+          wait_status=0
+          wait_output=$(timeout 20m docker wait "$container_name") || wait_status=$?
+
+          if [ "$wait_status" -ne 0 ]; then
+            echo "docker wait failed with status $wait_status" >&2
+            docker logs "$container_name" --since 0 || true
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
+            kill "$log_pid" 2>/dev/null || true
+            wait "$log_pid" || true
+            exit 1
+          fi
+
+          exit_code="$wait_output"
+
+          wait "$log_pid" || true
+          docker rm "$container_name" >/dev/null 2>&1 || true
+
+          exit "$exit_code"
       - name: Upload container logs
         if: always()
         uses: actions/upload-artifact@v4
